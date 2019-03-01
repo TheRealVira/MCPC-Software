@@ -145,11 +145,9 @@ func void vga_offsetLineCursor(offset) {
 
 func void vga_clearScreen() {
     var x = VGA_BASE_ADDR;
-    var end = vga_end_addr + 1;
-    while (x < end) {
-        $$(x, 0);
-        x += 1;
-    }
+    var size = vga_end_addr + 1 - x;
+
+    __memr_alloc__(x, size, 0);
 }
 
 #endif

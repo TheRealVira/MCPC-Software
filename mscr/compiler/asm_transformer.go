@@ -85,6 +85,25 @@ func asmForNodePre(nodeInterface interface{}, state *asmTransformState) []*asmCm
 
 			break
 
+		} else if astNode.FunctionName == "__memr_alloc__"{
+			// $$$ allocates memory in calc blocks,
+			// here it sets a range of values to an address
+			// e.g. $$$(0xA, 0x3, 0xB) allocates the memory space
+			// to 0xA with a fixed size of 0x3 and fills it
+			// with 0xB
+
+			if len(astNode.Parameters) != 3 {
+				panic("ERROR: A call to __memr_alloc__ must have three parameters (address, size, value). Source: "+astNode.Pos.String())
+			}
+
+			// addrParam1:=astNode.Parameters[0]
+			// sizeParam:=astNode.Parameters[1]
+			// valParam:=astNode.Parameters[2]
+
+			// TODO: Implement memr allocation of fixed size > 1
+
+			break
+
 		} else if astNode.FunctionName == "$$" {
 			// $$ creates references in calc blocks,
 			// here it sets values to an address
@@ -97,42 +116,7 @@ func asmForNodePre(nodeInterface interface{}, state *asmTransformState) []*asmCm
 			addrParam := astNode.Parameters[0]
 			valParam := astNode.Parameters[1]
 
-			addrAsmParam := runtimeValueToAsmParam(addrParam)
-			valAsmParam := runtimeValueToAsmParam(valParam)
-
-			newAsm = append(newAsm, &asmCmd{
-				ins:     "PUSH",
-				comment: " call to $$",
-				params: []*asmParam{
-					valAsmParam,
-				},
-			})
-
-			newAsm = append(newAsm, &asmCmd{
-				ins:     "MOV",
-				comment: " call to $$",
-				params: []*asmParam{
-					addrAsmParam,
-					rawAsmParam("F"),
-				},
-			})
-
-			newAsm = append(newAsm, &asmCmd{
-				ins:     "POP",
-				comment: " call to $$",
-				params: []*asmParam{
-					rawAsmParam("G"),
-				},
-			})
-
-			newAsm = append(newAsm, &asmCmd{
-				ins:     "STOR",
-				comment: " call to $$",
-				params: []*asmParam{
-					rawAsmParam("G"),
-					rawAsmParam("F"),
-				},
-			})
+			dollar_dollar(addrParam, valParam, newAsm)
 
 			break
 
@@ -451,4 +435,43 @@ func asmForNodePost(nodeInterface interface{}, state *asmTransformState) []*asmC
 	}
 
 	return nil
+}
+
+func dollar_dollar(addrParam, valParam *RuntimeValue, newAsm []*asmCmd) {
+	addrAsmParam := runtimeValueToAsmParam(addrParam)
+	valAsmParam := runtimeValueToAsmParam(valParam)
+
+	newAsm = append(newAsm, &asmCmd{
+		ins:     "PUSH",
+		comment: " call to $$",
+		params: []*asmParam{
+			valAsmParam,
+		},
+	})
+
+	newAsm = append(newAsm, &asmCmd{
+		ins:     "MOV",
+		comment: " call to $$",
+		params: []*asmParam{
+			addrAsmParam,
+			rawAsmParam("F"),
+		},
+	})
+
+	newAsm = append(newAsm, &asmCmd{
+		ins:     "POP",
+		comment: " call to $$",
+		params: []*asmParam{
+			rawAsmParam("G"),
+		},
+	})
+
+	newAsm = append(newAsm, &asmCmd{
+		ins:     "STOR",
+		comment: " call to $$",
+		params: []*asmParam{
+			rawAsmParam("G"),
+			rawAsmParam("F"),
+		},
+	})
 }
